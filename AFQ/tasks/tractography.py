@@ -6,7 +6,7 @@ import logging
 import pimms
 import multiprocessing
 
-from AFQ.tasks.decorators import as_file, as_img
+from AFQ.tasks.decorators import as_file
 from AFQ.tasks.utils import with_name
 from AFQ.definitions.utils import Definition
 import AFQ.tractography.tractography as aft
@@ -63,7 +63,9 @@ def _meta_from_tracking_params(
 
 
 @pimms.calc("seed")
-@as_file('_desc-seed_mask.nii.gz', include_track=True)
+@as_file('_desc-seed_dwimap.nii.gz',
+         include_track=True,
+         subfolder="tractography")
 def export_seed_mask(data_imap, tracking_params):
     """
     full path to a nifti file containing the
@@ -75,8 +77,27 @@ def export_seed_mask(data_imap, tracking_params):
         seed_mask_desc
 
 
+@pimms.calc("seed_thresh")
+@as_file('_desc-seedThreshed_mask.nii.gz',
+         include_track=True,
+         subfolder="tractography")
+def export_seed_mask_thresholded(data_imap, seed, tracking_params):
+    """
+    full path to a nifti file containing the
+    tractography seed mask thresholded
+    """
+    thresh = tracking_params['seed_threshold']
+    threshed_data = seed.get_fdata() > thresh
+    seed_mask_desc = dict(source=tracking_params['seed_mask'], thresh=thresh)
+    return nib.Nifti1Image(
+        threshed_data.astype(np.float32),
+        data_imap["dwi_affine"]), seed_mask_desc
+
+
 @pimms.calc("stop")
-@as_file('_desc-stop_mask.nii.gz', include_track=True)
+@as_file('_desc-stop_dwimap.nii.gz',
+         include_track=True,
+         subfolder="tractography")
 def export_stop_mask(data_imap, tracking_params):
     """
     full path to a nifti file containing the
@@ -86,6 +107,23 @@ def export_stop_mask(data_imap, tracking_params):
     stop_mask_desc = dict(source=tracking_params['stop_mask'])
     return nib.Nifti1Image(stop_mask, data_imap["dwi_affine"]), \
         stop_mask_desc
+
+
+@pimms.calc("stop_thresh")
+@as_file('_desc-stopThreshed_mask.nii.gz',
+         include_track=True,
+         subfolder="tractography")
+def export_stop_mask_thresholded(data_imap, stop, tracking_params):
+    """
+    full path to a nifti file containing the
+    tractography stop mask thresholded
+    """
+    thresh = tracking_params['stop_threshold']
+    threshed_data = stop.get_fdata() > thresh
+    stop_mask_desc = dict(source=tracking_params['stop_mask'], thresh=thresh)
+    return nib.Nifti1Image(
+        threshed_data.astype(np.float32),
+        data_imap["dwi_affine"]), stop_mask_desc
 
 
 @pimms.calc("stop")
@@ -98,7 +136,9 @@ def export_stop_mask_pft(pve_wm, pve_gm, pve_csf):
 
 
 @pimms.calc("streamlines")
-@as_file('_tractography', include_track=True)
+@as_file('_tractography',
+         include_track=True,
+         subfolder="tractography")
 def streamlines(data_imap, seed, stop,
                 tracking_params):
     """
@@ -278,7 +318,7 @@ def custom_tractography(import_tract=None):
 
 
 @pimms.calc("streamlines")
-@as_file('_tractography', include_track=True)
+@as_file('_tractography', include_track=True, subfolder="tractography")
 def gpu_tractography(data_imap, tracking_params, seed, stop,
                      tractography_ngpus=0, chunk_size=100000):
     """
@@ -322,7 +362,9 @@ def get_tractography_plan(kwargs):
             "tracking_params a dict")
 
     tractography_tasks = with_name([
-        export_seed_mask, export_stop_mask, streamlines])
+        export_seed_mask, export_seed_mask_thresholded,
+        export_stop_mask, export_stop_mask_thresholded,
+        streamlines])
 
     # use GPU accelerated tractography if asked for
     if "tractography_ngpus" in kwargs and kwargs["tractography_ngpus"] != 0:
@@ -394,13 +436,19 @@ def get_tractography_plan(kwargs):
             export_stop_mask_pft
     elif isinstance(stop_mask, Definition):
         tractography_tasks["export_stop_mask_res"] = pimms.calc("stop")(
-            as_file('_desc-stop_mask.nii.gz', include_track=True)(
-                stop_mask.get_image_getter("tractography")))
+            as_file(
+                '_desc-stop_mask.nii.gz',
+                include_track=True,
+                subfolder="tractography")(
+                    stop_mask.get_image_getter("tractography")))
 
     if isinstance(seed_mask, Definition):
         tractography_tasks["export_seed_mask_res"] = pimms.calc("seed")(
-            as_file('_desc-seed_mask.nii.gz', include_track=True)(
-                seed_mask.get_image_getter("tractography")))
+            as_file(
+                '_desc-seed_mask.nii.gz',
+                include_track=True,
+                subfolder="tractography")(
+                    seed_mask.get_image_getter("tractography")))
 
     return pimms.plan(**tractography_tasks)
 
