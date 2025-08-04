@@ -1541,7 +1541,7 @@ def dki_ak(dki_tf):
     return dki_tf.ak
 
 
-@pimms.calc("t1_brain_mask")  # TODO: t1_masked
+@pimms.calc("t1_brain_mask")
 @as_file(suffix='_desc-T1w_mask.nii.gz')
 def t1_brain_mask(t1_file):
     """
@@ -1608,7 +1608,7 @@ def brain_mask(t1_brain_mask, b0):
 
 
 @pimms.calc("bundle_dict", "reg_template", "tmpl_name")
-def get_bundle_dict(brain_mask, b0,
+def get_bundle_dict(b0,
                     bundle_info=None, reg_template_spec="mni_T1",
                     reg_template_space_name="mni"):
     """
@@ -1652,24 +1652,20 @@ def get_bundle_dict(brain_mask, b0,
     if bundle_info is None:
         bundle_info = abd.default18_bd() + abd.callosal_bd()
 
-    use_brain_mask = True
-    brain_mask = nib.load(brain_mask).get_fdata()
-    if np.all(brain_mask == 1.0):
-        use_brain_mask = False
     if isinstance(reg_template_spec, nib.Nifti1Image):
         reg_template = reg_template_spec
     else:
         img_l = reg_template_spec.lower()
         if img_l == "mni_t2":
             reg_template = afd.read_mni_template(
-                mask=use_brain_mask, weight="T2w")
+                mask=True, weight="T2w")
         elif img_l == "mni_t1":
             reg_template = afd.read_mni_template(
-                mask=use_brain_mask, weight="T1w")
+                mask=True, weight="T1w")
         elif img_l == "dti_fa_template":
-            reg_template = afd.read_ukbb_fa_template(mask=use_brain_mask)
+            reg_template = afd.read_ukbb_fa_template(mask=True)
         elif img_l == "hcp_atlas":
-            reg_template = afd.read_mni_template(mask=use_brain_mask)
+            reg_template = afd.read_mni_template(mask=True)
         elif img_l == "pediatric":
             reg_template = afd.read_pediatric_templates()[
                 "UNCNeo-withCerebellum-for-babyAFQ"]
