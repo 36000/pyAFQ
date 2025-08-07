@@ -23,7 +23,7 @@ import AFQ.data.fetch as afd
 # :doc:`plot_002_participant_afq_api` example. Please refer to that
 # example for a detailed description of the parameters.
 
-afd.organize_stanford_data(clear_previous_afq="track")
+afd.organize_stanford_data()
 
 data_dir = op.join(afd.afq_home, "stanford_hardi", "derivatives", "vistasoft",
                    "sub-01", "ses-01", "dwi")
@@ -36,7 +36,8 @@ t1_file = op.join(afd.afq_home, "stanford_hardi", "derivatives",
                   "sub-01_ses-01_T1w.nii.gz")
 
 output_dir = op.join(afd.afq_home, "stanford_hardi",
-                     "derivatives", "afq", "sub-01")
+                     "derivatives", "afq", "sub-01",
+                     "ses-01", "dwi")
 os.makedirs(output_dir, exist_ok=True)
 
 # Initialize the ParticipantAFQ object
