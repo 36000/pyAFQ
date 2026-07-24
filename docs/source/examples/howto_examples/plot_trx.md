@@ -80,7 +80,7 @@ The outcome is another instance of a `TrxFile` object. Within this object,
 we can access the streamlines and their coordinates. For example, to find
 what proportion of streamlines were classified into each group:
 
-```
+```{code-cell} ipython3
 print(len(group_trx.streamlines) / len(trx_file.streamlines))
 ```
 
