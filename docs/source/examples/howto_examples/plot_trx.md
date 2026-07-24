@@ -55,24 +55,25 @@ from trx.trx_file_memmap import load
 ```
 
 Then, we will load data from a TRX file. If you have previously run other examples
-that use the HBN dataset (e.g., )
+that use the HBN dataset you should have a file with this name that you can
+load:
 
 ```{code-cell} ipython3
 trx_file = load("./sub-NDARAA948VFH_ses-HBNsiteRU_acq-64dir_desc-bundles_tractography.trx")
 ```
 
-We can access the list of tract names in this file using the `group` dict
+We can access the list of tract names in this file using the `groups` dict
 that is stored as an attribute of the `trx_file`, and specifically the `keys`
 method of this dict:
 
 ```{code-cell} ipython3
-trx.groups.keys()
+trx_file.groups.keys()
 ```
 
 The contents of each group can be accessed using, for example:
 
 ```{code-cell} ipython3
-group_trx = trx.get_group("Left Anterior Vertical Occipital")
+group_trx = trx_file.get_group("Left Anterior Vertical Occipital")
 ```
 
 The outcome is another instance of a `TrxFile` object. Within this object,
