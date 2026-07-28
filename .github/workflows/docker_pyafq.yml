@@ -54,3 +54,6 @@ jobs:
     - name: Push pyAFQ GPU docker image
       if: github.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags')
       run: sh ./gpu_docker/docker-push.sh "nrdg" "11"
+
+    - name: Report pyAFQ image size
+      run: docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | tee -a $GITHUB_STEP_SUMMARY
