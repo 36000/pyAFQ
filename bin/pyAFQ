@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 
-import warnings
 import os.path as op
+import warnings
 from argparse import ArgumentParser
-
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
 
     print("Loading AFQ libraries...")
 
+    import logging
+
     import AFQ.utils.bin as afb
 
-    import logging
-    logger = logging.getLogger('AFQ')
+    logger = logging.getLogger("AFQ")
     logger.setLevel(level=logging.INFO)
 
-usage = \
-    """pyAFQ /path/to/afq_config.toml
+usage = """pyAFQ /path/to/afq_config.toml
 
 Runs full AFQ processing as specified in the configuration file.
 
@@ -33,99 +32,118 @@ def parse_cli(arg_dict):
     cli_parser = ArgumentParser(usage=usage + afb.dict_to_toml(arg_dict))
 
     cli_parser.add_argument(
-        dest='config',
+        dest="config",
         action="store",
         help="Path to config file or folder. "
-        + "For example, /path/to/afq_config.toml")
+        + "For example, /path/to/afq_config.toml",
+    )
 
     cli_parser.add_argument(
-        '-g',
-        '--generate-config-only',
-        dest='generate_toml',
+        "-g",
+        "--generate-config-only",
+        dest="generate_toml",
         action="store_true",
         default=False,
         help="Generate a default config file at the path"
-        + " specified without running pyAFQ.")
+        + " specified without running pyAFQ.",
+    )
 
     cli_parser.add_argument(
-        '-q',
-        '--generate-qsiprep-json-only',
-        dest='generate_json',
+        "-q",
+        "--generate-qsiprep-json-only",
+        dest="generate_json",
         action="store_true",
         default=False,
         help="Generate two default json files at the path"
         + " (which should be a folder) specified without running pyAFQ;"
-        + " this json can be used to define a recon workflow in qsiprep.")
+        + " this json can be used to define a recon workflow in qsiprep.",
+    )
 
     cli_parser.add_argument(
-        '-o',
-        '--overwrite-config',
-        dest='overwrite',
+        "-o",
+        "--overwrite-config",
+        dest="overwrite",
         action="store_true",
         default=False,
         help="Overwrite config file at the path"
         + " with current arguments and comments,"
-        + " preserving previous defaults when applicable.")
+        + " preserving previous defaults when applicable.",
+    )
 
     cli_parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbose',
+        "-v",
+        "--verbose",
+        dest="verbose",
         action="store_true",
         default=False,
-        help="Verbose when reading TOML file")
+        help="Verbose when reading TOML file",
+    )
 
     cli_parser.add_argument(
-        '-d',
-        '--dry-run',
-        dest='dry_run',
+        "-d",
+        "--dry-run",
+        dest="dry_run",
         action="store_true",
         default=False,
         help="Perform a dry run - prints recognized"
-        + " arguments without running pyAFQ")
+        + " arguments without running pyAFQ",
+    )
 
     cli_parser.add_argument(
-        '-c',
-        '--call',
-        dest='to_call',
+        "-c",
+        "--call",
+        dest="to_call",
         default="all",
         help="AFQ.api attribute to get using the specified config file."
         + " Defaults to 'all', which will perform the entire"
-        + " tractometry pipeline.")
+        + " tractometry pipeline.",
+    )
 
     cli_parser.add_argument(
-        '-t', '--notrack', action="store_true", default=False,
-        help="Disable the use of pyAFQ being recorded by Google Analytics. ")
+        "-t",
+        "--notrack",
+        action="store_true",
+        default=False,
+        help="Disable the use of pyAFQ being recorded by Google Analytics. ",
+    )
 
     opts = cli_parser.parse_args()
 
-    return opts.config, opts.generate_toml, opts.overwrite,\
-        opts.verbose, opts.dry_run, opts.to_call, opts.generate_json
+    return (
+        opts.config,
+        opts.generate_toml,
+        opts.overwrite,
+        opts.verbose,
+        opts.dry_run,
+        opts.to_call,
+        opts.generate_json,
+    )
 
 
 def download_templates():
-    from AFQ.data.fetch import (
-        read_templates,
-        read_pediatric_templates,
-        read_callosum_templates,
-        read_cp_templates,
-        read_or_templates,
-        read_ar_templates)
+    import AFQ.data.fetch as afd
 
-    read_templates()
-    read_pediatric_templates()
-    read_callosum_templates()
-    read_cp_templates()
-    read_or_templates()
-    read_ar_templates()
+    afd.read_templates()
+    afd.read_pediatric_templates()
+    afd.read_callosum_templates()
+    afd.read_cp_templates()
+    afd.read_or_templates()
+    afd.read_ar_templates()
+    afd.read_slf_templates()
+    afd.read_callosum_templates()
+    afd.fetch_synthseg_models()
+    afd.read_mni_template(mask=True, weight="T2w")
+    afd.read_mni_template(mask=True, weight="T1w")
+    afd.read_org800_templates()
+    afd.fetch_brainchop_models()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     arg_dict = afb.func_dict_to_arg_dict(logger=logger)
-    config_file, generate_only, overwrite, verbose,\
-        dry_run, to_call, generate_json =\
-            parse_cli(arg_dict)
-    
+    config_file, generate_only, overwrite, verbose, dry_run, to_call, generate_json = (
+        parse_cli(arg_dict)
+    )
+
     if config_file == "download":
         logger.info("Downloading templates...")
         download_templates()
@@ -135,19 +153,15 @@ if __name__ == '__main__':
         raise ValueError("Can only generate .toml or .json; not both")
     if generate_json:
         if not op.isdir(config_file):
-            raise ValueError(
-                "Config must be a folder when generating a .json")
+            raise ValueError("Config must be a folder when generating a .json")
     else:
         if config_file[-5:] != ".toml":
-            raise ValueError(
-                "Config file must be .toml unless generating a .json")
+            raise ValueError("Config file must be .toml unless generating a .json")
 
     if generate_only:
-        afb.generate_config(
-            config_file, arg_dict, overwrite, logger=logger)
+        afb.generate_config(config_file, arg_dict, overwrite, logger=logger)
     elif generate_json:
-        afb.generate_json(
-            config_file, overwrite, logger=logger)
+        afb.generate_json(config_file, overwrite, logger=logger)
     else:
         afb.parse_config_run_afq(
             config_file,
@@ -156,4 +170,5 @@ if __name__ == '__main__':
             overwrite=overwrite,
             verbose=verbose,
             dry_run=dry_run,
-            logger=logger)
+            logger=logger,
+        )
