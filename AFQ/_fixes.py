@@ -431,7 +431,7 @@ def make_mp4(show_m, out_path, n_frames=720, az_ang=-0.5, fps=30, crf=35, verbos
             show_m.screens[0].controller.rotate((radians(az_ang), 0), None)
             show_m.render()
             show_m.window.draw()
-            show_m.snapshot(frame_fname)
+            show_m.snapshot(fname=frame_fname)
             video.append(Image.open(frame_fname).convert("RGB"))
 
         all_left, all_upper = float("inf"), float("inf")

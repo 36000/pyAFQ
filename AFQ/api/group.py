@@ -917,7 +917,7 @@ class GroupAFQ(object):
                     scene=figure, window_type="offscreen", size=(600, 600)
                 )
                 scene_rotate_forward(show_m, figure)
-                show_m.snapshot(this_fname)
+                show_m.snapshot(fname=this_fname)
 
         def _save_file(curr_img, curr_file_num):
             save_path = op.abspath(

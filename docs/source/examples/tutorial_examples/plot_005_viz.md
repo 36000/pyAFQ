@@ -207,7 +207,7 @@ def save_png(scene, name):
     show_m.screens[0].controller.rotate((0, radians(-90)), None)
     show_m.render()
     show_m.window.draw()
-    show_m.snapshot(op.join(out_folder, name))
+    show_m.snapshot(fname=op.join(out_folder, name))
 
 save_png(scene, 'arc_cst1.png')
 ```
