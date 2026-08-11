@@ -363,7 +363,7 @@ class ParticipantAFQ(object):
                         pass
                     show_m.render()
                     show_m.window.draw()
-                    show_m.snapshot(this_fname)
+                    show_m.snapshot(fname=this_fname)
 
         def _save_file(curr_img):
             save_path = op.abspath(
