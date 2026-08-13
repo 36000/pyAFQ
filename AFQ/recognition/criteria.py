@@ -191,9 +191,9 @@ def include(b_sls, bundle_def, **kwargs):
     if "inc_addtol" in bundle_def:
         include_roi_tols = []
         for inc_tol in bundle_def["inc_addtol"]:
-            include_roi_tols.append((inc_tol / kwargs["vox_dim"] + kwargs["tol"]) ** 2)
-    else:
-        include_roi_tols = [kwargs["tol"] ** 2] * len(bundle_def["include"])
+            include_roi_tols.append(inc_tol / kwargs["vox_dim"] + kwargs["tol"])
+    else:  # TODO: should this be distance_to_corner / 2?
+        include_roi_tols = [kwargs["tol"]] * len(bundle_def["include"])
 
     inc_results = abr.check_sls_with_inclusion(
         b_sls.get_selected_sls(), bundle_def["include"], include_roi_tols
@@ -261,9 +261,9 @@ def exclude(b_sls, bundle_def, **kwargs):
     if "exc_addtol" in bundle_def:
         exclude_roi_tols = []
         for exc_tol in bundle_def["exc_addtol"]:
-            exclude_roi_tols.append((exc_tol / kwargs["vox_dim"] + kwargs["tol"]) ** 2)
+            exclude_roi_tols.append(exc_tol / kwargs["vox_dim"] + kwargs["tol"])
     else:
-        exclude_roi_tols = [kwargs["tol"] ** 2] * len(bundle_def["exclude"])
+        exclude_roi_tols = [kwargs["tol"]] * len(bundle_def["exclude"])
     for sl_idx, sl in enumerate(b_sls.get_selected_sls()):
         if abr.check_sl_with_exclusion(sl, bundle_def["exclude"], exclude_roi_tols):
             accept_idx[sl_idx] = 1
