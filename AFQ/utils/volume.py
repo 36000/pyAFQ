@@ -3,16 +3,18 @@ import logging
 import dipy.tracking.utils as dtu
 import nibabel as nib
 import numpy as np
+import scipy.ndimage as ndim
 from dipy.io.utils import create_nifti_header, get_reference_info
 from dipy.tracking.streamline import select_random_set_of_streamlines
 from scipy.ndimage import distance_transform_edt
 from scipy.spatial.distance import dice
-from skimage.morphology import dilation
+
+_FULL = ndim.generate_binary_structure(3, 3)
 
 logger = logging.getLogger("AFQ")
 
 
-def transform_roi(roi, mapping, is_boolean):
+def transform_roi(roi, mapping, is_boolean, integrity=0.8, max_tol=1.0):
     """
     After being non-linearly transformed, ROIs tend to have holes in them.
     We perform a couple of computational geometry operations on the ROI to
@@ -30,6 +32,16 @@ def transform_roi(roi, mapping, is_boolean):
     is_boolean : bool
         Whether the ROI is boolean or not.
 
+    integrity : float, optional
+        The fraction of the original ROI that must be preserved after
+        transformation.
+        Default: 0.8
+
+    max_tol : float, optional
+        Maximum tolerance for the signed distance field used to warp
+        boolean masks.
+        Default: 1.0
+
     Returns
     -------
     ROI after dilation and hole-filling
@@ -39,17 +51,46 @@ def transform_roi(roi, mapping, is_boolean):
     if isinstance(roi, nib.Nifti1Image):
         roi = roi.get_fdata()
 
-    if is_boolean:
-        # dilate binary images to avoid losing small ROIs
-        roi = dilation(roi)
-        roi = distance_transform_edt(roi.astype(bool))
+    if not is_boolean:
+        return mapping.transform(roi.astype(np.float32), interpolation="linear").astype(
+            np.float32
+        )
 
-    roi = mapping.transform((roi.astype(float)), interpolation="linear")
+    # signed distance field
+    mask = roi.astype(bool)
+    phi = (distance_transform_edt(mask) - distance_transform_edt(~mask)).astype(
+        np.float32
+    )
+    phi_w = mapping.transform(phi, interpolation="linear")
 
-    if is_boolean:
-        return (roi > 0.5).astype(np.uint8)
-    else:
-        return roi.astype(np.float32)
+    # remove dipy adding 0s at edges
+    ones = np.ones(mask.shape, dtype=np.float32)
+    valid = mapping.transform(ones, interpolation="linear") > 0.5
+
+    # estimate of the warped volume
+    expected = mapping.transform(mask.astype(np.float32), interpolation="linear")[
+        valid
+    ].sum()
+
+    # Preserve the number of connected components in the original mask
+    n_in = ndim.label(mask, structure=_FULL)[1]
+
+    mask = roi.astype(bool)
+    phi = (distance_transform_edt(mask) - distance_transform_edt(~mask)).astype(
+        np.float32
+    )
+    phi = mapping.transform(phi, interpolation="linear")
+
+    for t in np.arange(0, max_tol + 0.1, 0.1):
+        out = (phi_w > -t) & valid
+        n_out = ndim.label(out, structure=_FULL)[1]
+        # preserve rough size and number of connected components
+        intact = (out.sum() >= integrity * expected) and (n_out <= n_in)
+        if intact or t >= max_tol:
+            print(t)
+            break
+
+    return out.astype(np.uint8)
 
 
 def density_map(tractogram, n_sls=None, normalize=False):
