@@ -192,7 +192,7 @@ def include(b_sls, bundle_def, **kwargs):
         include_roi_tols = []
         for inc_tol in bundle_def["inc_addtol"]:
             include_roi_tols.append(inc_tol / kwargs["vox_dim"] + kwargs["tol"])
-    else:  # TODO: should this be distance_to_corner / 2?
+    else:
         include_roi_tols = [kwargs["tol"]] * len(bundle_def["include"])
 
     inc_results = abr.check_sls_with_inclusion(
@@ -417,10 +417,13 @@ def _prepare_bundle_def(bundle_dict, bundle_name, mapping, img):
 
     apply_to_roi_dict(bundle_def, check_space, dry_run=True, apply_to_prob_map=True)
 
+    # The 0.5 is necessary here such that when we trilinear
+    # interpolate the distance transform, the value at the edge of
+    # the ROI is 0.
     apply_to_roi_dict(
         bundle_def,
         lambda roi_img: nib.Nifti1Image(
-            distance_transform_edt(np.where(roi_img.get_fdata() == 0, 1, 0)),
+            distance_transform_edt(roi_img.get_fdata() == 0) - 0.5,
             roi_img.affine,
         ),
         dry_run=False,

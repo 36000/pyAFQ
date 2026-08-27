@@ -4,7 +4,11 @@ from enum import IntEnum
 from time import time
 
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import (
+    binary_dilation,
+    distance_transform_edt,
+    gaussian_filter,
+)
 from skimage.segmentation import find_boundaries
 
 from AFQ.data.fetch import afq_home, fetch_babyseg_models
@@ -114,12 +118,15 @@ def pve_from_babyseg(babyseg_data):
     GM_labels = [
         BabySegLabels.LEFT_CEREBRAL_CORTEX,
         BabySegLabels.LEFT_CEREBELLUM_CORTEX,
+        BabySegLabels.RIGHT_CEREBRAL_CORTEX,
+        BabySegLabels.RIGHT_CEREBELLUM_CORTEX,
+    ]
+
+    SOFT_GM_labels = [
         BabySegLabels.LEFT_THALAMUS,
         BabySegLabels.LEFT_CAUDATE,
         BabySegLabels.LEFT_HIPPOCAMPUS,
         BabySegLabels.LEFT_AMYGDALA,
-        BabySegLabels.RIGHT_CEREBRAL_CORTEX,
-        BabySegLabels.RIGHT_CEREBELLUM_CORTEX,
         BabySegLabels.RIGHT_THALAMUS,
         BabySegLabels.RIGHT_CAUDATE,
         BabySegLabels.RIGHT_HIPPOCAMPUS,
@@ -144,6 +151,32 @@ def pve_from_babyseg(babyseg_data):
     PVE[np.isin(babyseg_data, CSF_labels), 0] = 1.0
     PVE[np.isin(babyseg_data, GM_labels), 1] = 1.0
     PVE[np.isin(babyseg_data, WM_labels), 2] = 1.0
+
+    # WM is dilated 2 voxels, and where it overlaps with
+    # soft GM, we convert the soft GM to WM. This is to allow
+    # tractography to more easily traverse narrow
+    # WM regions
+    wm_mask = np.isin(babyseg_data, WM_labels)
+    soft_gm_mask = np.isin(babyseg_data, SOFT_GM_labels)
+
+    PVE[soft_gm_mask, 1] = 1.0
+
+    dist_to_wm = distance_transform_edt(~wm_mask)
+    wm_reach = binary_dilation(wm_mask, iterations=2)
+
+    convert_to_wm = np.zeros_like(soft_gm_mask)
+    for label in SOFT_GM_labels:
+        label_mask = babyseg_data == label
+        if not label_mask.any():
+            continue
+
+        dist_to_competing = distance_transform_edt(wm_mask | label_mask)
+
+        candidate = wm_reach & label_mask
+        convert_to_wm |= candidate & (dist_to_wm <= dist_to_competing)
+
+    PVE[convert_to_wm, 1] = 0.0
+    PVE[convert_to_wm, 2] = 1.0
 
     # For mixed labels, we assume they are WM interior, GM exterior
     # except on boundaries with wm, where we assume they are WM.
